@@ -1,0 +1,13 @@
+/.idea
+/build
+
+/debian/*
+!/debian/debian
+!/debian/Makefile
+
+/all.mk
+/configure
+/config.log
+/config.status
+/autom4te.cache
+
