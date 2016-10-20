@@ -272,7 +272,7 @@ static void *mod_conn_create(TALLOC_CTX *ctx, void *instance) {
   }
 
   code = OCIStmtPrepare2(conn.svc, &conn.stmt, conn.err,
-                         (OraText *) inst->cfg.query, (ub4) inst->query_len,
+                         (const OraText *) inst->cfg.query, (ub4) inst->query_len,
                          NULL, 0, OCI_NTV_SYNTAX, OCI_DEFAULT);
   if (!MOD_OCI_SUCCESS(code)) {
     ERROR("rlm_oracle (%s): failed to prepare OCI statement: %s", inst->name, mod_strerror_err(code, conn.err));
@@ -518,24 +518,10 @@ static int mod_conn_stmt_fetch(rlm_oracle_conn_t *conn, size_t attr_col, size_t 
 
     if (attr_col == value_col) {
       FR_TOKEN ret_token = fr_pair_list_afrom_str(request->reply, cols[attr_col].value, &request->reply->vps);
-      if (ret_token == T_INVALID) {
-        RWARN("failed to parse list of VPs '%s', will try to parse manually as a single VP", cols[attr_col].value);
-        char *attr_str = cols[attr_col].value;
-        char *value_str = strchr(attr_str, '=');
-        if (value_str) {
-          value_str[0] = '\0';
-          value_str++;
-          VALUE_PAIR *new_vp = fr_pair_make(request->reply, &request->reply->vps, attr_str, value_str, T_OP_ADD);
-          if (!new_vp) {
-            RWARN("failed to parse VP: %s = %s", attr_str, value_str);
-          } else {
-            RDEBUG("fetched %s = %s", attr_str, value_str);
-          }
-        } else {
-          RWARN("failed to parse manually, '=' sign not found at VP: %s", attr_str);
-        }
-      } else {
+      if (ret_token != T_INVALID) {
         RDEBUG("fetched VP list: %s", cols[attr_col].value);
+      } else {
+        RERROR("failed to parse VP list: %s", cols[attr_col].value);
       }
     } else {
       cols[value_col].value[cols[value_col].retlen] = '\0';
